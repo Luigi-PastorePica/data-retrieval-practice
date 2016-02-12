@@ -1,5 +1,4 @@
 # Note: Get info does not return anything for the time being. This will change.
-# Large portion of commented code. Do not pay attention, all of it will likely be absent from the next commit
 
 
 from bs4 import BeautifulSoup
@@ -109,7 +108,9 @@ def get_info(urlin, first_char, last_char):
 
     query_chars = char_list_generator(first_char, last_char)
     print query_chars                                           #Debugging
-    info_list = []
+    
+    student_list = []
+    others_list = []
 
     for string in query_chars:
         br.form = list(br.forms())[0]       # Used to select form w/o name attribute
@@ -125,51 +126,52 @@ def get_info(urlin, first_char, last_char):
 
         # Records html code inside the tr tags that contain classes that start with record-person (each represented by var person).
         # Inside each of these tr tags there are different td tags with the desired info.
-        # I am planning to make a list of these code sections and extracting the pertinent info on each iteration.
-        for person in soup.findAll('tr', class_=re.compile('^record-person')):
-            print person        # print for Debugging purposes
-            return person       # return for debugging purposes. Must remove
 
+        for person in soup.find_all('tr', class_=re.compile('^record-person')):
 
-        # Please disregard the commented section bellow. It is part of the old code and will most probably be removed completely
-        '''
-        i = 0
-        for aName in soup.find_all("span", {"class": "link results-name"}):
+            # Exception applied to handle an attribute error always present in the last iteration
+            try:
+                affiliation = person.find_next("div", {"class": "results-affiliation"}).get_text()
+            except AttributeError as e:
+                print (e)
+            finally:
 
-            n = aName.get_text()            # remember to parse name and last name if necessary.
-            info_list.nameList.append(n)     # Remember to get rid of "(Click to show details)"
+                if affiliation == "Student":
 
-            print(info_list.nameList[i])
-            i += 1
+                    full_name = person.find_next("span", {"class": "link results-name"}).get_text()
+                    # do smthg to separate name and lastname
+                    last_name = "None right now"
+                    email = person.find_next("td", {"class": "record-data-email"}).get_text()
+                    major = person.find_next("td", {"class": "record-data-major"}).get_text()
+                    student_list.append(CollegePersonInfo(full_name, last_name, major, email, affiliation))  # Thinking of having a parent class and adding one child for students and another for other people. Having other people could be useful down the road
 
-        i = 0
-        for anEmail in soup.find_all("td",{"class": "record-data-email"}):
+                else:
+                    full_name = person.find("span", {"class": "link results-name"})
+                    # do smthg to separate name and lastname
+                    last_name = "None right now"
+                    email = person.find("td", {"class": "record-data-email"})
+                    major = person.find("td", {"class": "record-data-major"})
+                    others_list.append(CollegePersonInfo(full_name, last_name, "N/A", email, affiliation))
 
-            e = anEmail.get_text()
-            info_list.emailList.append(e)
+        time.sleep(15)      # Sleep time to prevent being treated as a bot.
 
-            print(info_list.email[i])
-            i += 1
+    return student_list
 
-        i = 0
-        for anAffiliation in soup.find_all("div", {"class": "results-affiliation"}):
-
-            aff = anAffiliation.get_text()
-            info_list.affiliationList.append(aff)
-
-            print(info_list.affiliationList[i])
-            i += 1
-
-        time.sleep(15)  # Forces 15 second wait time until next request (to prevent being detected as a bot)
-
-    return info_list'''
 
 # Test characters
-start_char = 'Z'
-finish_char = 'a'
+start_char = 'q'        # Unique character chosen at random for debugging purposes
+finish_char = 'q'
 
-names = get_info("https://www.osu.edu/findpeople/", start_char, finish_char)
-print names
+students = []
+students = get_info("https://www.osu.edu/findpeople/", start_char, finish_char)
 
-if names == None:
+print  len(students)         # Debugging
+for person in students:     # Debugging
+    print person.name
+    print person.last_name
+    print person.email
+    print person.major
+    print person.affiliation
+
+if students == None:
     print ("Page could not be opened")
