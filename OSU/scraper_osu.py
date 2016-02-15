@@ -7,6 +7,7 @@ from mechanize import Browser
 from mechanize import HTTPError
 from mechanize import URLError
 import time
+import random
 import re       # Please provide feedback on this library.
                 # Used to find classes in the html code that start with a specific string
 import csv      # Not implemented yet
@@ -17,7 +18,10 @@ import csv      # Not implemented yet
 # If "start"'s and "finish"'s order is inverted, the function puts them in order
 def char_list_generator(start, finish):
 
-    start, finish = char_fix(start, finish)
+    try:
+        start, finish = char_fix(start, finish)
+    except TypeError as e:
+        print e
     ascii_code_list = range(ord(start), ord(finish) + 1)
     char_list = []
     for code in ascii_code_list:
@@ -25,22 +29,35 @@ def char_list_generator(start, finish):
 
     return char_list
 
-# Determines whether the characters "first" and "last" are in valid Alphabetic range
+# Determines whether the characters "first" and "last" are in valid alphabetic range
 # Returns uppercase version "first" and "last" in alphabetic order
 def char_fix(first, last):
 
-    # Determines range of valid ASCII characters
+    if len(first) == 1 and first.isalpha():
+        first = first.upper()
+        if len(last) == 1 and last.isalpha():
+            last = last.upper()
+
+            # Places initial and final characters in order if required
+            if ord(first) > ord(last):
+                first, last = last, first
+
+        else:
+            print "Error: '" + last + "' is not an alpha character"   ##### Will update later, when I have a better understanding of error handling
+            return None                                             ##### Address this. Multiple return statements.
+    else:
+        print "Error: '" + first + "' is not an alpha character"  ##### Will update later, when I have a better understanding of error handling
+        return None                                             ##### Address this
+
+    return (first, last)
+
+    '''Determines range of valid ASCII characters
     initial_limit_lower = ord('a')
     final_limit_lower = ord('z')
     initial_limit_upper = ord('A')
     final_limit_upper = ord('Z')
-
-    # Converts characters to ASCII code equivalent
-    first_ascii = ord(first)
-    last_ascii = ord(last)
-
-    # Exceptions in case a non alphabetic character is used by mistake
-    # Not sure whether I am implementing this properly
+    Exceptions in case a non alphabetic character is used by mistake
+    Not sure whether I am implementing this properly
     try:
         if first_ascii < initial_limit_upper or first_ascii > final_limit_upper:        # If alpha and uppercase, nothing is done
             if first_ascii < initial_limit_lower or first_ascii > final_limit_lower:    # If not within limits, then it is not alpha
@@ -54,41 +71,42 @@ def char_fix(first, last):
         return None
 
     try:
-        if last_ascii < initial_limit_upper or last_ascii > final_limit_upper:          # If alpha and upper, nothing is done
-            if last_ascii < initial_limit_lower or last_ascii > final_limit_lower:      # If not within limits, then it is not alpha
+         if last_ascii < initial_limit_upper or last_ascii > final_limit_upper:          # If alpha and upper, nothing is done
+             if last_ascii < initial_limit_lower or last_ascii > final_limit_lower:      # If not within limits, then it is not alpha
                 raise CharacterDomainError(last)
-            else:
+             else:
                 last = last.upper()                 # Converts alpha lowercase to uppercase
                 last_ascii = ord(last)              # And reassigns to proper ASCII code
 
     except CharacterDomainError as e:
         print(e.value, "character does not belong to the English alphabet")
-        return None
-
-    # Places initial and final characters in order if required
-    if first_ascii > last_ascii:
-        first, last = last, first
-
-    return (first, last)
+        return None'''
 
 
-class CharacterDomainError (Exception):             # Not sure I am implementing this properly
+class CharacterDomainError (Exception):
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
         return repr(self.value)
 
+# Objects of this class store information of individuals registered in the institution
+# Organization might be dropped eventually. Keeping it depends on it being useful for our purposes.
+class PersonInfo(object):
 
-class CollegePersonInfo:
+    def __init__(self, name, last_name, email, affiliation, organization):
 
-    def __init__(self, name, last_name, major, email, affiliation):
+        self.person_name = name
+        self.person_last_name = last_name
+        self.person_email = email
+        self.person_affiliation = affiliation
+        self.person_organization = organization
 
-        self.name = name
-        self.last_name = last_name
-        self.major = major
-        self.email = email
-        self.affiliation = affiliation
+class StudentPersonInfo(PersonInfo):
+
+    def __init__(self, name, last_name, email, affiliation, organization, major):
+        super(StudentPersonInfo, self).__init__(name, last_name, email, affiliation, organization)
+        self.person_major = major
 
 
 # Gets the information of every person in the directory
@@ -108,13 +126,13 @@ def get_info(urlin, first_char, last_char):
 
     query_chars = char_list_generator(first_char, last_char)
     print query_chars                                           #Debugging
-    
+
     student_list = []
     others_list = []
 
-    for string in query_chars:
+    for element in query_chars:
         br.form = list(br.forms())[0]       # Used to select form w/o name attribute
-        br['lastname'] = string             # Places query string into last name field
+        br['lastname'] = element             # Places query string into last name field
         br.submit()
 
         # Exception handling for response
@@ -129,31 +147,45 @@ def get_info(urlin, first_char, last_char):
 
         for person in soup.find_all('tr', class_=re.compile('^record-person')):
 
-            # Exception applied to handle an attribute error always present in the last iteration
+            # These exceptions are a temporary fix applied to handle an AttributeError always present in the last iteration
+            try:
+                name = person.find_next("span", {"class": "link results-name"}).get_text()
+            except AttributeError as e:
+                print (e)
+            # do smthg to separate name and lastname
+            try:
+                last_name = "None right now"
+            except AttributeError as e:
+                print (e)
+            try:
+                email = person.find_next("td", {"class": "record-data-email"}).get_text()
+            except AttributeError as e:
+                print (e)
             try:
                 affiliation = person.find_next("div", {"class": "results-affiliation"}).get_text()
             except AttributeError as e:
                 print (e)
+            try:
+                organization = person.find_next("td", {"class": "record-data-org"}).get_text()
+            except AttributeError as e:
+                print (e)
+
             finally:
 
                 if affiliation == "Student":
-
-                    full_name = person.find_next("span", {"class": "link results-name"}).get_text()
-                    # do smthg to separate name and lastname
-                    last_name = "None right now"
-                    email = person.find_next("td", {"class": "record-data-email"}).get_text()
-                    major = person.find_next("td", {"class": "record-data-major"}).get_text()
-                    student_list.append(CollegePersonInfo(full_name, last_name, major, email, affiliation))  # Thinking of having a parent class and adding one child for students and another for other people. Having other people could be useful down the road
+                    try:
+                        major = person.find_next("td", {"class": "record-data-major"}).get_text()
+                    except AttributeError as e:
+                        print (e)
+                    student_list.append(StudentPersonInfo(name, last_name, email, affiliation, organization, major))
 
                 else:
-                    full_name = person.find("span", {"class": "link results-name"})
-                    # do smthg to separate name and lastname
-                    last_name = "None right now"
-                    email = person.find("td", {"class": "record-data-email"})
-                    major = person.find("td", {"class": "record-data-major"})
-                    others_list.append(CollegePersonInfo(full_name, last_name, "N/A", email, affiliation))
+                    others_list.append(PersonInfo(name, last_name, email, affiliation, organization))
 
-        time.sleep(15)      # Sleep time to prevent being treated as a bot.
+        # Pseudo-random sleep time generator (to prevent being treated as a bot)
+        # Obtaining information from website takes some time. This might not be needed,
+        random.seed()
+        time.sleep(random.randint(3,10))
 
     return student_list
 
@@ -167,11 +199,11 @@ students = get_info("https://www.osu.edu/findpeople/", start_char, finish_char)
 
 print  len(students)         # Debugging
 for person in students:     # Debugging
-    print person.name
-    print person.last_name
-    print person.email
-    print person.major
-    print person.affiliation
+    print person.person_name
+    print person.person_last_name
+    print person.person_email
+    print person.person_major
+    print person.person_affiliation
 
 if students == None:
     print ("Page could not be opened")
