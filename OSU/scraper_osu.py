@@ -8,8 +8,7 @@ from mechanize import HTTPError
 from mechanize import URLError
 import time
 import random
-import re       # Please provide feedback on this library.
-                # Used to find classes in the html code that start with a specific string
+import re
 import csv      # Not implemented yet
 
 
@@ -20,12 +19,14 @@ def char_list_generator(start, finish):
 
     try:
         start, finish = char_fix(start, finish)
-    except TypeError as e:
+    except TypeError as e:                 # Needs to raise a flag instead
         print e
-    ascii_code_list = range(ord(start), ord(finish) + 1)
-    char_list = []
-    for code in ascii_code_list:
-        char_list.append(chr(code) + '*')
+    except ValueError as e:                # Needs to raise a flag instead
+        print e
+    else:
+        ascii_code_list = range(ord(start), ord(finish) + 1)
+
+        char_list = [chr(code) + '*' for code in ascii_code_list]
 
     return char_list
 
@@ -51,36 +52,14 @@ def char_fix(first, last):
 
     return (first, last)
 
-    '''Determines range of valid ASCII characters
-    initial_limit_lower = ord('a')
-    final_limit_lower = ord('z')
-    initial_limit_upper = ord('A')
-    final_limit_upper = ord('Z')
-    Exceptions in case a non alphabetic character is used by mistake
-    Not sure whether I am implementing this properly
-    try:
-        if first_ascii < initial_limit_upper or first_ascii > final_limit_upper:        # If alpha and uppercase, nothing is done
-            if first_ascii < initial_limit_lower or first_ascii > final_limit_lower:    # If not within limits, then it is not alpha
-                raise CharacterDomainError(first)
-            else:
-                first = first.upper()               # Converts alpha lowercase to uppercase
-                first_ascii = ord(first)            # And reassigns to proper ASCII code
-
-    except CharacterDomainError as e:
-        print(e.value, "character does not belong to the English alphabet")
-        return None
-
-    try:
-         if last_ascii < initial_limit_upper or last_ascii > final_limit_upper:          # If alpha and upper, nothing is done
-             if last_ascii < initial_limit_lower or last_ascii > final_limit_lower:      # If not within limits, then it is not alpha
-                raise CharacterDomainError(last)
-             else:
-                last = last.upper()                 # Converts alpha lowercase to uppercase
-                last_ascii = ord(last)              # And reassigns to proper ASCII code
-
-    except CharacterDomainError as e:
-        print(e.value, "character does not belong to the English alphabet")
-        return None'''
+def name_splitter(raw_name):
+    full_name = re.split(',+', raw_name, 1)
+    full_name[0] = full_name[0].lstrip()                # Last name
+    full_name[1] = full_name[1].lstrip()                # First name and middle name
+    name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle name
+    full_name[1] = name_and_middle[0]                   # First name
+    full_name.append((name_and_middle[1].replace('(Click to show details)', '')).rstrip())  # Middle name. Removes undesired string.
+    return full_name
 
 
 class CharacterDomainError (Exception):
@@ -90,23 +69,41 @@ class CharacterDomainError (Exception):
     def __str__(self):
         return repr(self.value)
 
-# Objects of this class store information of individuals registered in the institution
+# Instances of this class store information of individuals registered in the institution
 # Organization might be dropped eventually. Keeping it depends on it being useful for our purposes.
 class PersonInfo(object):
 
-    def __init__(self, name, last_name, email, affiliation, organization):
+    # Default constructor
+    def __init__(self, name, middle_name, last_name, email, affiliation, organization):
 
         self.person_name = name
+        self.person_middle_name = middle_name
         self.person_last_name = last_name
         self.person_email = email
         self.person_affiliation = affiliation
         self.person_organization = organization
 
+    # Overrides default __str__() method
+    def __str__(self):
+        print str(self.person_name)
+        print str(self.person_middle_name)
+        print str(self.person_last_name)
+        print str(self.person_email)
+        print str(self.person_affiliation)
+        print str(self.person_organization)
+
+# Expands PersonInfo class in case person is a student
 class StudentPersonInfo(PersonInfo):
 
-    def __init__(self, name, last_name, email, affiliation, organization, major):
-        super(StudentPersonInfo, self).__init__(name, last_name, email, affiliation, organization)
+    # Default constructor
+    def __init__(self, name, middle_name, last_name, email, affiliation, organization, major):
+        super(StudentPersonInfo, self).__init__(name, middle_name, last_name, email, affiliation, organization)
         self.person_major = major
+
+    # Overrides parent class' (PersonInfo) __str__() method
+    def __str__(self):
+        super(StudentPersonInfo, self).__str__()
+        print str(self.person_major)
 
 
 # Gets the information of every person in the directory
@@ -145,49 +142,77 @@ def get_info(urlin, first_char, last_char):
         # Records html code inside the tr tags that contain classes that start with record-person (each represented by var person).
         # Inside each of these tr tags there are different td tags with the desired info.
 
+        i = 0       # Using counter to skip duplicates (each individual has two tr tags assigned that begin with 'record-person')
         for person in soup.find_all('tr', class_=re.compile('^record-person')):
+
+            if i % 2 == 1:
+                continue
 
             # These exceptions are a temporary fix applied to handle an AttributeError always present in the last iteration
             try:
-                name = person.find_next("span", {"class": "link results-name"}).get_text()
+                raw_name = person.find_next("span", {"class": "link results-name"}).get_text()
+
+                # Does the same as function name_splitter.
+                # Left it here because it is more readable, and I think more efficient also.
+                '''
+                full_name = re.split(',+', person.find_next("span", {"class": "link results-name"}).get_text(), 1 ) # gets all name info and separates last name
+                last_name = full_name[0].lstrip()                              # Cleans and assigns last name
+                full_name[1] = full_name[1].lstrip()
+                name_and_middle = re.split(' +', full_name[1],1)               # Splits first and middle names
+                name, middle_name = name_and_middle[0], name_and_middle[1]
+                middle_name = (middle_name.replace('(Click to show details)', '')).rstrip()  # Cleans middle name from undesired string
+                '''
             except AttributeError as e:
-                print (e)
-            # do smthg to separate name and lastname
-            try:
-                last_name = "None right now"
-            except AttributeError as e:
-                print (e)
+                print e
+                continue        # Name is required. If not found, skip to next person.
+            else:
+                person_name = name_splitter(raw_name)
+                last_name = person_name[0]
+                name = person_name[1]
+                middle_name = person_name[2]
+
             try:
                 email = person.find_next("td", {"class": "record-data-email"}).get_text()
             except AttributeError as e:
-                print (e)
+                #print (e)
+                continue        # e-mail is required. If not found, skip to next person.
+
             try:
                 affiliation = person.find_next("div", {"class": "results-affiliation"}).get_text()
             except AttributeError as e:
                 print (e)
+                affiliation = "Aff. N/A"        # If there is no affiliation, the person is placed in others_list
+
             try:
                 organization = person.find_next("td", {"class": "record-data-org"}).get_text()
             except AttributeError as e:
                 print (e)
+                organization = "Org. N/A"
+            else:
+                if not organization:            # Might have to change this condition.
+                    organization = "Org. N/A"
 
-            finally:
-
-                if affiliation == "Student":
-                    try:
-                        major = person.find_next("td", {"class": "record-data-major"}).get_text()
-                    except AttributeError as e:
-                        print (e)
-                    student_list.append(StudentPersonInfo(name, last_name, email, affiliation, organization, major))
-
+            if affiliation == "Student" or affiliation == "Student, Student Employee":
+                # if  re.compile('^Student') == re.compile(affiliation):
+                try:
+                    major = person.find_next("td", {"class": "record-data-major"}).get_text()
+                except AttributeError as e:
+                    print (e)
+                    pass
                 else:
-                    others_list.append(PersonInfo(name, last_name, email, affiliation, organization))
+                    student_list.append(StudentPersonInfo(name, middle_name, last_name, email, affiliation, organization, major))
+
+            else:
+                others_list.append(PersonInfo(name, middle_name, last_name, email, affiliation, organization))
+
+            i += 1
 
         # Pseudo-random sleep time generator (to prevent being treated as a bot)
         # Obtaining information from website takes some time. This might not be needed,
         random.seed()
         time.sleep(random.randint(3,10))
 
-    return student_list
+    return student_list     # Needs to return student_list and others_list. Consider using another list or a dict.
 
 
 # Test characters
@@ -199,11 +224,9 @@ students = get_info("https://www.osu.edu/findpeople/", start_char, finish_char)
 
 print  len(students)         # Debugging
 for person in students:     # Debugging
-    print person.person_name
-    print person.person_last_name
-    print person.person_email
-    print person.person_major
-    print person.person_affiliation
+
+    person.__str__()
+    print '\n'
 
 if students == None:
     print ("Page could not be opened")
