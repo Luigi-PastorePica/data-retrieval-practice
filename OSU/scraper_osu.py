@@ -8,8 +8,7 @@ import time
 import random
 import re
 from osu_mod import *
-import csv      # Not implemented yet
-
+import csv
 
 
 # Instances of this class store information of individuals registered in the institution
@@ -37,11 +36,11 @@ class PersonInfo(object):
         print str(self.person_organization)
 
     # Joins information in a string separated by delimiter
-    def join_info(self, delimiter):                        # is it fine to use a variable called delimiter? See csv doc.
+    def join_info(self):
 
         info = [self.person_last_name, self.person_name, self.person_middle_name,
                 self.person_email, self.person_affiliation, self.person_organization]
-        return delimiter.join(info)
+        return info
 
 
 # Expands PersonInfo class in case person is a student
@@ -59,9 +58,10 @@ class StudentPersonInfo(PersonInfo):
         print str(self.person_major)
 
     # Overrides parent class' (PersonInfo) join_info() method
-    def join_info(self, delimiter):
-        info = [super(StudentPersonInfo, self).join_info(delimiter), self.person_major]
-        return delimiter.join(info)
+    def join_info(self):
+        info = (super(StudentPersonInfo, self).join_info())
+        info.append(self.person_major)
+        return info
 
 
 # Gets the information of every person in the directory
@@ -80,7 +80,6 @@ def get_info(urlin, first_char, last_char):
         return None
 
     query_chars = char_list_generator(first_char, last_char)
-    print query_chars                                           #Debugging
 
     student_list = []
     others_list = []
@@ -88,7 +87,7 @@ def get_info(urlin, first_char, last_char):
     for element in query_chars:                 # The following three lines of code work only because start of html does not change
         br.form = list(br.forms())[0]           # Used to select form w/o name attribute
         br['lastname'] = element                # Places query string into last name field
-        br.submit()
+        br.submit()                             # Submits filled form
 
         # Exception handling for response
         try:
@@ -97,7 +96,7 @@ def get_info(urlin, first_char, last_char):
             print(e)
             return None
 
-        # Records html code inside the tr tags that contain classes that start with record-person (each represented by var person).
+        # Records html code inside the tr tags containing classes that start with record-person (each represented by var person).
         # Inside each of these tr tags there are different td tags with the desired info.
         i = -1       # Using counter to skip duplicates (each individual has two tr tags assigned that begin with 'record-person')
         for person in soup.find_all('tr', class_=re.compile('^record-person')):
@@ -110,7 +109,7 @@ def get_info(urlin, first_char, last_char):
             try:
                 raw_name = person.find_next("span", {"class": "link results-name"}).get_text()
 
-                # Does the same as function name_splitter.
+                # Does the same as function name_splitter (below, inside else).
                 # Left it here because it is more readable, and I think more efficient also.
                 '''
                 full_name = re.split(',+', person.find_next("span", {"class": "link results-name"}).get_text(), 1 ) # gets all name info and separates last name
@@ -128,6 +127,8 @@ def get_info(urlin, first_char, last_char):
                 last_name = person_name[0]
                 name = person_name[1]
                 middle_name = person_name[2]
+
+
 
             try:
                 email = person.find_next("td", {"class": "record-data-email"}).get_text()
@@ -151,7 +152,7 @@ def get_info(urlin, first_char, last_char):
                     organization = "Org. N/A"
 
             if affiliation == "Student" or affiliation == "Student, Student Employee":
-            # if  re.compile('^Student') == affiliation:
+            # if  re.compile('^Student') == affiliation:        # Tried to compare with first word.
                 try:
                     major = person.find_next("td", {"class": "record-data-major"}).get_text()
                 except AttributeError as e:
@@ -166,23 +167,72 @@ def get_info(urlin, first_char, last_char):
         # Pseudo-random sleep time generator (to prevent being treated as a bot)
         # Obtaining information from website takes some time. This might not be needed,
         random.seed()
-        time.sleep(random.randint(3,10))
+        time.sleep(random.randint(1,7))
 
-    return student_list     # Needs to return student_list and others_list. Consider using another list or a dict.
+    people_info = [student_list, others_list]
+    return people_info
 
+
+
+URL = "https://www.osu.edu/findpeople/"
 
 # Test characters
 start_char = 'q'        # Unique character chosen at random for debugging purposes
 finish_char = 'q'
 
-students = []
-students = get_info("https://www.osu.edu/findpeople/", start_char, finish_char)
+while True:     # Simple loop in case a problem occurs (e.g. temporary connection loss, could not reach server, etc.)
 
-print len(students)         # Debug
-for person in students:     # Debug
-    # person.__str__()
-    print person.join_info(',')
-    print '\n'
+    people_info = get_info(URL, start_char, finish_char)
 
-if students == None:
-    print ("Page could not be opened")
+    # When no information could be obtained from website, asks whether the suer wants to try again
+    if people_info is None:
+        user_answer = input("Page could not be opened. Do you want to try again? [Y/N]:")
+        while user_answer != 'Y' and user_answer != 'y' and user_answer != 'N' and user_answer != 'n':
+            print "Sorry, wrong input."
+            user_answer = input ("Page could not be opened. Do you want to try again? [Y/N]:")
+        if user_answer == 'Y' or user_answer == 'y':
+            continue
+        elif user_answer == 'N' or user_answer == 'n':
+            break
+        else:
+            print "Unexpected error occurred."
+            break
+
+        # This part of the code will handle errors with the characters when I find what to return from the respective functions
+        # Portion should be unindented one level when finally applied
+        '''
+        elif compare returned value after problem with characters:
+            user_answer = input ("start_char is not alpha. Do you want to replace it? [Y/N]")
+            while user_answer != 'Y' and user_answer != 'y' and user_answer != 'N' and user_answer != 'n':
+                print "Sorry, wrong input."
+                user_answer = input ("Page could not be opened. Do you want to try again? [Y/N]:")
+            if user_answer == 'Y' or user_answer == 'y':
+                start_char = input("Please input new value for start_char")
+                continue
+            elif user_answer == 'N' or user_answer == 'n':
+                break
+        elif compare returned value after problem with characters:
+            user_answer = input ("finish_char is not alpha. Do you want to replace it? [Y/N]")
+            while user_answer != 'Y' and user_answer != 'y' and user_answer != 'N' and user_answer != 'n':
+                print "Sorry, wrong input."
+                user_answer = input ("Page could not be opened. Do you want to try again? [Y/N]:")
+            if user_answer == 'Y' or user_answer == 'y':
+                finish_char = input("Please input new value for finish_char")
+                continue
+            elif user_answer == 'N' or user_answer == 'n':
+                break
+        '''
+
+    else:
+        print len(people_info[0])        # Debug
+        print len(people_info[1])        # Debug
+
+        print list(enumerate(people_info[0]))       # Debug. This is currently printing tuples (number, object type and memory address)
+
+        export_to_csv("osu_student_dir.csv", people_info[0])
+        export_to_csv("osu_others_dir.csv", people_info[1])
+
+        break
+
+print "Program quit"
+exit()
