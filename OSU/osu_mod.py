@@ -1,5 +1,8 @@
 import re
 import csv
+from string import capwords
+import os
+
 
 # Generates an ordered alphabetic list that spans from "start" to "finish" (inclusive)
 # Asterisk added after each character (website's form's specific requirement)
@@ -48,25 +51,43 @@ def char_fix(first, last):
 # Divides and individual's name and cleans it from whitespaces and undesired strings
 def name_splitter(raw_name):
     full_name = re.split(',+', raw_name, 1)
-    full_name[0] = full_name[0].lstrip()                # Last name
+    full_name[0] = capwords(full_name[0].lstrip())                # Last name
     full_name[1] = full_name[1].lstrip()                # First name and middle name
     name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle name
-    full_name[1] = name_and_middle[0]                   # First name
-    full_name.append((name_and_middle[1].replace('(Click to show details)', '')).rstrip())  # Middle name. Removes undesired string.
+    full_name[1] = capwords(name_and_middle[0])                   # First name
+    middle_name = (name_and_middle[1].replace('(Click to show details)', '')).rstrip()  # Middle name. Removes undesired string.
+    full_name.append(capwords(middle_name))                  # Extra step only for readability
     return full_name
+
 
 def export_to_csv(file_name, people_list):
 
         # Places heading in file. I know I will have to change this to apply only when file is new.
         # I also have to consider selecting whether Major is printed on file or not.
-        row_heading = ['Name', 'Middle Name', 'Last Name', 'e-mail', 'Affiliation', 'Organization', 'Major']
+        if people_list[0].person_affiliation.startswith(("Student", "student")):
+            row_heading = ['Name', 'Middle Name', 'Last Name', 'e-mail', 'Affiliation', 'Organization', 'Major']
+        else:
+            row_heading = ['Name', 'Middle Name', 'Last Name', 'e-mail', 'Affiliation', 'Organization']
+
         info_for_csv = [person.join_info() for person in people_list]    # Prepares data for csv writer
 
-        with open(file_name, "ab") as csv_output:
-            writer = csv.writer(csv_output)
-            writer.writerow(row_heading)
-            writer.writerows(info_for_csv)
-            csv_output.close                # Shown as having no effect. Does method writerows close the file?
+        # If the file exists and is not empty, just add data
+        if os.path.isfile(file_name) and os.stat(file_name).st_size > 0:    # If file exists and
+
+            with open(file_name, "ab") as csv_output_file:
+                writer = csv.writer(csv_output_file)
+                writer.writerows(info_for_csv)      # Writes data on file
+                csv_output_file.close()
+
+        # Else, first write a heading and then the data
+        else:
+
+            with open(file_name, "ab") as csv_output_file:
+                writer = csv.writer(csv_output_file)
+                writer.writerow(row_heading)        # Writes heading
+                writer.writerows(info_for_csv)      # Writes data on file
+                csv_output_file.close()
+
 
 # Not used anymore
 class CharacterDomainError (Exception):

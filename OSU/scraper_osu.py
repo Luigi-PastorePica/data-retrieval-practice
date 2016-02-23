@@ -151,7 +151,8 @@ def get_info(urlin, first_char, last_char):
                 if not organization:            # Might have to change this condition.
                     organization = "Org. N/A"
 
-            if affiliation == "Student" or affiliation == "Student, Student Employee":
+            # if affiliation == "Student" or affiliation == "Student, Student Employee":
+            if affiliation.startswith(("Student", "student")):
             # if  re.compile('^Student') == affiliation:        # Tried to compare with first word.
                 try:
                     major = person.find_next("td", {"class": "record-data-major"}).get_text()
@@ -177,8 +178,8 @@ def get_info(urlin, first_char, last_char):
 URL = "https://www.osu.edu/findpeople/"
 
 # Test characters
-start_char = 'q'        # Unique character chosen at random for debugging purposes
-finish_char = 'q'
+start_char = 'a'        # Unique character chosen at random for debugging purposes
+finish_char = 'z'
 
 while True:     # Simple loop in case a problem occurs (e.g. temporary connection loss, could not reach server, etc.)
 
