@@ -1,4 +1,4 @@
-Name,Middle Name,Last Name,e-mail,Affiliation,Organization,Major
+Last Name,Name,Middle Name,e-mail,Affiliation,Organization,Major
 Aalaei,Cy,,aalaei.1@osu.edu,Student Employee,School of Music,
 Aaron,David,Andrew,aaron.39@osu.edu,Student Employee,Athletics,
 Abarra,Kenneth,Desengano,abarra.2@osu.edu,Student Employee,Tech Hub,
@@ -275,7 +275,7 @@ D'eramo,Natalie,Isabella,deramo.8@osu.edu,Student Employee,Traditions at Scott,
 D'ercole,Caroline,,dercole.1@osu.edu,Student Employee,Rec Sports Membership,
 D'onofrio,Kristina,Nicole,donofrio.57@osu.edu,Student Employee,Dance,
 D'souza,Joan,May Spicer,dsouza.67@osu.edu,Student,Org. N/A,International Studies
-Dabkowski,Meghan,Frances,dabkowski.5@osu.edu,Student Employee,Spanish & Portuguese,
+Dabkowski,Meghan,Frances,dabkowski.5@osu.edu,"Student, Student Employee",Spanish & Portuguese,Spanish & Portuguese
 Dadas,Aaron,J,dadas.8@osu.edu,Student,Org. N/A,Biomedical Engineering
 Dade,Steven,Lee,dade.16@osu.edu,Student,Org. N/A,Geography
 Dadosky,Liza,Margret,dadosky.4@osu.edu,Student Employee,Rec Sports Community Programs,
@@ -804,7 +804,7 @@ Igal,Fartun,Mohamed,igal.4@osu.edu,Student,Org. N/A,Medical Laboratory Science
 Igal,Shirwa,Mursal,igal.6@osu.edu,Student,Org. N/A,Re-Exploration
 Igel,Brittani,Anne,igel.17@osu.edu,Student,Org. N/A,Psychology
 Igel,Margaret,,igel.11@osu.edu,Student Employee,Administration,
-Iglesias Pascual,Hector,,iglesiaspascual.1@osu.edu,Student Employee,Spanish & Portuguese,
+Iglesias Pascual,Hector,,iglesiaspascual.1@osu.edu,"Student, Student Employee",Spanish & Portuguese,Spanish & Portuguese
 Ignaci,Arvin,,ignaci.1@osu.edu,Student,Org. N/A,
 Ignacio,David,Perez,ignacio.4@osu.edu,"Student, Student Employee",Ctr for Life Science Education,Molecular Cellular and Dev Bio
 Ignarski,Liz,,ignarski.1@osu.edu,Student,Org. N/A,Psychology
@@ -1847,6 +1847,7 @@ Rabosyuk,Olesya,,rabosyuk.2@osu.edu,Student Employee,Patient Financial Services,
 Raby,Jessica,Lynn,raby.11@osu.edu,Student,Org. N/A,Animal Sciences
 Race,Jonathan,Andrew,race.18@osu.edu,Student Employee,Statistics,
 Racer,James,Justin,racer.8@osu.edu,Student,Org. N/A,Sport and Leisure Studies
+Racer,Katie,Louise,racer.12@osu.edu,Student,Org. N/A,
 Radanovich,Alexander,Daniel,radanovich.5@osu.edu,Student Employee,Pathology,
 Radcliff,Megan,Taylor,radcliff.60@osu.edu,Student Employee,Physical Medicine & Rehab,
 Radebaugh,Christopher,John,radebaugh.27@osu.edu,"Student, Student Employee",ResNet,Computer & Information Science
@@ -2065,6 +2066,7 @@ Talarico,Michael,Steven,talarico.15@osu.edu,Student Employee,Dining Services Uni
 Talbert,Bradford,Kent,talbert.48@osu.edu,Student Employee,Physics,
 Talbot,Allison,Elizabeth,talbot.60@osu.edu,Student Employee,Graduate School Administration,
 Talbot,Catie,,talbot.47@osu.edu,Student Employee,Computer Science & Engineering,
+Talbott,Christopher,Andrew,talbott.54@osu.edu,Student,Org. N/A,Special Education
 Taleb,Manar,N,taleb.5@osu.edu,Student,Org. N/A,Economics
 Talentino,Spencer,Ernest,talentino.1@osu.edu,Student Employee,Rec Sports Membership,
 Talesara,Vishank,Vishnu Kumar,talesara.1@osu.edu,Student Employee,Mathematics,

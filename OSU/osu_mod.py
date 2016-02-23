@@ -65,9 +65,9 @@ def export_to_csv(file_name, people_list):
         # Places heading in file. I know I will have to change this to apply only when file is new.
         # I also have to consider selecting whether Major is printed on file or not.
         if people_list[0].person_affiliation.startswith(("Student", "student")):
-            row_heading = ['Name', 'Middle Name', 'Last Name', 'e-mail', 'Affiliation', 'Organization', 'Major']
+            row_heading = ['Last Name', 'Name', 'Middle Name', 'e-mail', 'Affiliation', 'Organization', 'Major']
         else:
-            row_heading = ['Name', 'Middle Name', 'Last Name', 'e-mail', 'Affiliation', 'Organization']
+            row_heading = ['Last Name', 'Name', 'Middle Name', 'e-mail', 'Affiliation', 'Organization']
 
         info_for_csv = [person.join_info() for person in people_list]    # Prepares data for csv writer
 
