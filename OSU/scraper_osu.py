@@ -6,9 +6,9 @@ from mechanize import HTTPError
 from mechanize import URLError
 import time
 import random
-import re
 from osu_mod import *
-import csv
+from person_class import *
+
 
 
 # Instances of this class store information of individuals registered in the institution
@@ -28,14 +28,9 @@ class PersonInfo(object):
     # Overrides default __str__() method
     # Consider printing result of join_info() instead
     def __str__(self):
-        print str(self.person_name)
-        print str(self.person_middle_name)
-        print str(self.person_last_name)
-        print str(self.person_email)
-        print str(self.person_affiliation)
-        print str(self.person_organization)
+        return ', '.join(self.join_info())
 
-    # Joins information in a string separated by delimiter
+    # Returns an iterator with all the attributes of PersonInfo
     def join_info(self):
 
         info = [self.person_last_name, self.person_name, self.person_middle_name,
@@ -54,8 +49,8 @@ class StudentPersonInfo(PersonInfo):
     # Overrides parent class' (PersonInfo) __str__() method
     # Consider printing result of join_info() instead
     def __str__(self):
-        super(StudentPersonInfo, self).__str__()
-        print str(self.person_major)
+        return ', '.join(self.join_info())
+
 
     # Overrides parent class' (PersonInfo) join_info() method
     def join_info(self):
@@ -151,9 +146,7 @@ def get_info(urlin, first_char, last_char):
                 if not organization:            # Might have to change this condition.
                     organization = "Org. N/A"
 
-            # if affiliation == "Student" or affiliation == "Student, Student Employee":
             if affiliation.startswith(("Student", "student")):
-            # if  re.compile('^Student') == affiliation:        # Tried to compare with first word.
                 try:
                     major = person.find_next("td", {"class": "record-data-major"}).get_text()
                 except AttributeError as e:
@@ -185,7 +178,7 @@ while True:     # Simple loop in case a problem occurs (e.g. temporary connectio
 
     people_info = get_info(URL, start_char, finish_char)
 
-    # When no information could be obtained from website, asks whether the suer wants to try again
+    # When no information could be obtained from website, asks whether the user wants to try again
     if people_info is None:
         user_answer = input("Page could not be opened. Do you want to try again? [Y/N]:")
         while user_answer != 'Y' and user_answer != 'y' and user_answer != 'N' and user_answer != 'n':
@@ -227,6 +220,7 @@ while True:     # Simple loop in case a problem occurs (e.g. temporary connectio
     else:
         print len(people_info[0])        # Debug
         print len(people_info[1])        # Debug
+
 
         print list(enumerate(people_info[0]))       # Debug. This is currently printing tuples (number, object type and memory address)
 
