@@ -10,78 +10,70 @@ import re
 from scrape_util import *       # Is it preferable to just import the module and call funct. in this way: scrape_util.instantiate_browser()
 from person_class import *
 
+
+# Function get_person_info() is not intended to be reusable
+# Takes (link, name) tuple. Returns StudentPersonInfo object
+def get_person_info(link_and_name):
+
+    minisoup = BeautifulSoup(urlopen('http://whitepages.tufts.edu/' + str(link_and_name[0])).read(), "html.parser")
+    td_tags = minisoup.find_all('td')
+
+    # name = td_tags[1].get_text().strip()
+    major = td_tags[5].get_text().strip()
+    email = td_tags[9].get_text().strip()
+    affiliation = td_tags[11].get_text().strip()
+
+    if email is None or email == '':
+        return None
+
+    if affiliation is None or affiliation == '':
+        affiliation = '=NA()'
+
+    full_name = name_splitter(link_and_name[1])
+
+    student = StudentPersonInfo(full_name[1], full_name[2], full_name[0], email, affiliation, "=NA()", major)
+
+    return student
+
 url = 'http://directory.tufts.edu/asearch.cgi'
+person_page_url = 'http://directory.tufts.edu/'
 first_char = 'a'
 last_char = 'a'
 
-# Instantiation of a browser
-browser_obj = instantiate_browser(url, False)
-browser_obj.select_form("search")
 
-query_chars = char_list_generator(first_char, last_char)
+query_strings = char_list_generator(first_char, last_char)
 
-# start a for loop here to iterate over query_chars
+for query_string in query_strings:
 
-# This function will eventually be moved to scrape_util module
-# Fills directory form and submits it. Returns the response from the mechanize browser object
-# Fields to be filled and values are mostly predetermined. Only query_char (second argument) changes when called.
-def fill_form(browser_object, query_string):
-    browser_object['type'] = ['Students']
-    browser_object['LastOption'] = ['starts']
-    browser_object['getLast'] = query_string     # Temporarily using only one set of chars for development and debugging
+    # Instantiation of a browser object
+    browser_obj = instantiate_browser(url, False)
+
+    soup = BeautifulSoup(get_form_response(browser_obj, query_string).read(), "html.parser")
+
+    soup.html.extract()  # Removes the whole html tag. Only what is after the html tag is required. Returned object lost.
 
 
-    # This piece of code below does exactly the same
+    a_tags = soup.find_all('a')  # Gets all the link tags
 
-    # control1 = browser_obj.form.find_control('type')
-    # control1.value = ['Students']
-    # control2 = browser_obj.form.find_control('LastOption')
-    # control2.value = ['starts']
-    # control3 = browser_obj.form.find_control('getLast')
-    # control3.value = query_char
+    print query_string  #Debugging
+    print len(a_tags)   #Debugging
 
-    # And yet again, the code below does exactly the same
-    
-    # control1 = browser_obj.form.find_control('type')
-    # browser_obj[control1.name] = ['Students']
-    # control2 = browser_obj.form.find_control('LastOption')
-    # browser_obj[control2.name] = ['starts']
-    # control3 = browser_obj.form.find_control('getLast')
-    # browser_obj[control3.name] = query_char
+    if len(a_tags) == 0:
+        continue
+    del a_tags[-1]               # Last link removed, not relevant.
 
-    browser_object.submit()
-    return browser_object.response()
+    if a_tags[0].get_text() == "Directory Home":
+        student_list = [get_person_info(get_name_link(a_tags[-1]))]
 
-soup = BeautifulSoup(fill_form(browser_obj, query_chars[0]).read(), "html.parser")  # Testing with only one query_string
+    # List of StudentPersonInfo objects
+    student_list = filter(None, (get_person_info(get_name_link(a_tag)) for a_tag in a_tags))
+    #student_list = [get_person_info(get_name_link(link_tag)) for link_tag in link_tags]
 
-soup.html.extract()  # Removes the whole html tag. Only what is after the html tag is required. Returned object lost.
-
-link_tags = soup.find_all('a')  # Gets all the link tags
-del link_tags[-1]               # Last link removed, not relevant.
-
-for link_tag in link_tags:
-    full_name = link_tag.string.extract()
-    print full_name
-    # link_tag.a.unwrap()
-    print
-
-
-for link_tag in link_tags:
-    print link_tag
-    print
-
-
-
-# Each link will be opened and BeautifulSoup will be used to get all relevant info from response.
-# BeautifulSoup object will be overwritten on each loop.
-# Once all links checked, go back to first browser object and enter new chars into form.
-
-
+    export_to_csv('tuft_student_dir.csv', student_list)
 
 
 print "Application quit normally"
 exit()
 
-# def get_info(url_in):
 
 

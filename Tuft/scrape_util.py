@@ -59,7 +59,6 @@ def char_list_generator(start, finish, add_chars = None, extra_chars = None):
 
 
 # Generates a simple iterable containing the alphabet in either uppercase or lowercase
-#
 def alpha_generator(uppercase = None):
 
     # Generates iterable containing iterable in lowercase
@@ -71,8 +70,9 @@ def alpha_generator(uppercase = None):
         alpha_char_list = [chr(ascii_code) for ascii_code in range(65, 91)]
     else:
         raise TypeError('Boolean type argument expected for uppercase argument')    #Stack lost, consider revising
-
+                                                                                    # What about printing TypeError and raising
     return alpha_char_list
+
 
 # Determines whether the characters "first" and "last" are in valid alphabetic range
 # Returns uppercase version "first" and "last" in alphabetic order
@@ -108,15 +108,21 @@ def char_fix(first, last, uppercase = None):
 
     return (first, last)
 
+
 # Divides and individual's name and cleans it from whitespaces and undesired strings
+# Consider using a dictionary
 def name_splitter(raw_name):
-    full_name = re.split(',+', raw_name, 1)
-    full_name[0] = capwords(full_name[0].lstrip())                # Last name
-    full_name[1] = full_name[1].lstrip()                # First name and middle name
-    name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle name
-    full_name[1] = capwords(name_and_middle[0])                   # First name
-    middle_name = (name_and_middle[1].replace('(Click to show details)', '')).rstrip()  # Middle name. Removes undesired string.
-    full_name.append(capwords(middle_name))                  # Extra step only for readability
+    full_name = re.split(',+', raw_name, 1)             # Splits names and last name into a list
+    full_name[0] = capwords(full_name[0].strip())       # Last name
+    full_name[1] = full_name[1].strip()                 # Cleans First name and middle name
+    name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle names into a list
+    full_name[1] = capwords(name_and_middle[0])         # First name
+
+    # If there is no middle name.
+    if len(name_and_middle) > 1:
+        full_name.append(capwords((name_and_middle[1]).rstrip()))   # Adds middle names to list
+    else:
+        full_name.append('=NA()')
     return full_name
 
 
@@ -164,6 +170,54 @@ def instantiate_browser(url, robots = None):
     br_obj.open(url)
 
     return br_obj
+
+
+# Fills directory form and submits it. Returns the response from the mechanize browser object
+# Fields to be filled and values are mostly predetermined. Only query_char (second argument) changes when called.
+def get_form_response(browser_object, query_string):
+    browser_object.select_form("search")
+    browser_object['type'] = ['Students']
+    browser_object['LastOption'] = ['starts']
+    browser_object['getLast'] = query_string     # Temporarily using only one set of chars for development and debugging
+
+    # This piece of code below does exactly the same as above. Left for reference.
+
+    # control1 = browser_obj.form.find_control('type')
+    # control1.value = ['Students']
+    # control2 = browser_obj.form.find_control('LastOption')
+    # control2.value = ['starts']
+    # control3 = browser_obj.form.find_control('getLast')
+    # control3.value = query_char
+
+    # And yet again, the code below does exactly the same. Left for reference.
+
+    # control1 = browser_obj.form.find_control('type')
+    # browser_obj[control1.name] = ['Students']
+    # control2 = browser_obj.form.find_control('LastOption')
+    # browser_obj[control2.name] = ['starts']
+    # control3 = browser_obj.form.find_control('getLast')
+    # browser_obj[control3.name] = query_char
+
+    browser_object.submit()
+    return browser_object.response()
+
+
+# Receives an <a> tag and its contents
+# Returns a 2-tuple containing the link in the <a> tag and the contents of the tag.
+def get_name_link(a_tag):
+    link = str(a_tag.get('href'))            # Obtains link contained in <a> html tag
+    # link = 'http://whitepages.tufts.edu/' + link
+    contents = str(a_tag.string.extract())      # This operation might not be the most efficient. Look for alternatives
+    return link, contents                       # Consider potential errors when returning this tuple
+
+
+# Debug function for short lists. Returns a string with elements of list separated by newline chars.
+# I an element of the list is a tuple, the contents of the tuple are placed in one line.
+def debug_multiline_list(lst):
+
+    single_str_list = [', '.join(line) if type(line) == tuple else str(line) for line in lst]
+    return '\n'.join(single_str_list)
+
 
 # Not used anymore
 class CharacterDomainError (Exception):
