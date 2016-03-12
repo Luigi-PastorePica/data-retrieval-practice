@@ -15,23 +15,39 @@ from person_class import *
 # Takes (link, name) tuple. Returns StudentPersonInfo object
 def get_person_info(link_and_name):
 
-    minisoup = BeautifulSoup(urlopen('http://whitepages.tufts.edu/' + str(link_and_name[0])).read(), "html.parser")
-    td_tags = minisoup.find_all('td')
+    if type(link_and_name) is tuple:
+        mini_soup = BeautifulSoup(urlopen('http://whitepages.tufts.edu/' + str(link_and_name[1])).read(), "html.parser")
+        full_name = name_splitter(link_and_name[0])
+    elif type(link_and_name) is BeautifulSoup:
+        mini_soup = link_and_name
+        full_name = None
+    else:
+        raise AttributeError('link_and_name must be either a tuple or a BeautifulSoup instance')
+        mini_soup = None
+        student = None
 
-    # name = td_tags[1].get_text().strip()
-    major = td_tags[5].get_text().strip()
-    email = td_tags[9].get_text().strip()
-    affiliation = td_tags[11].get_text().strip()
+    if mini_soup is not None:
 
-    if email is None or email == '':
-        return None
+        td_tags = mini_soup.find_all('td')
 
-    if affiliation is None or affiliation == '':
-        affiliation = '=NA()'
+        if full_name is None:
+            name = td_tags[1].get_text().strip()
+            full_name = name_splitter(name, False)
 
-    full_name = name_splitter(link_and_name[1])
+        email = td_tags[9].get_text().strip()
 
-    student = StudentPersonInfo(full_name[1], full_name[2], full_name[0], email, affiliation, "=NA()", major)
+        # If there is no e-mail or no name, there is no use for the
+        if email is None or email == '' or full_name is None or full_name == '':
+            student = None
+
+        else:
+
+            major = td_tags[5].get_text().strip()
+            affiliation = td_tags[11].get_text().strip()
+            if affiliation is None or affiliation == '':
+                affiliation = '=NA()'
+
+            student = StudentPersonInfo(full_name[1], full_name[2], full_name[0], email, affiliation, "=NA()", major)
 
     return student
 
@@ -52,7 +68,6 @@ for query_string in query_strings:
 
     soup.html.extract()  # Removes the whole html tag. Only what is after the html tag is required. Returned object lost.
 
-
     a_tags = soup.find_all('a')  # Gets all the link tags
 
     print query_string  #Debugging
@@ -62,15 +77,19 @@ for query_string in query_strings:
         continue
     del a_tags[-1]               # Last link removed, not relevant.
 
-    if a_tags[0].get_text() == "Directory Home":
-        student_list = [get_person_info(get_name_link(a_tags[-1]))]
+    if a_tags[-1].get('href').startswith('mailto'):
+        for i,b in enumerate(soup.find_all('td')):
+            print str(i) + b.get_text()
+        student_list = [get_person_info(soup)]
 
-    # List of StudentPersonInfo objects
-    student_list = filter(None, (get_person_info(get_name_link(a_tag)) for a_tag in a_tags))
-    #student_list = [get_person_info(get_name_link(link_tag)) for link_tag in link_tags]
-
-    export_to_csv('tuft_student_dir.csv', student_list)
-
+    else:
+        # List of StudentPersonInfo objects. None objects not appended.
+        try:
+            student_list = filter(None, (get_person_info(get_name_link(a_tag)) for a_tag in a_tags))
+        except AttributeError:
+            continue
+        else:
+            export_to_csv('tuft_student_dir.csv', student_list)
 
 print "Application quit normally"
 exit()

@@ -110,19 +110,68 @@ def char_fix(first, last, uppercase = None):
 
 
 # Divides and individual's name and cleans it from whitespaces and undesired strings
-# Consider using a dictionary
-def name_splitter(raw_name):
-    full_name = re.split(',+', raw_name, 1)             # Splits names and last name into a list
-    full_name[0] = capwords(full_name[0].strip())       # Last name
-    full_name[1] = full_name[1].strip()                 # Cleans First name and middle name
-    name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle names into a list
-    full_name[1] = capwords(name_and_middle[0])         # First name
+# Consider changing to a dictionary or a class for readability
+def name_splitter(raw_name, last_name_first = None, last_starts_with= None):
 
-    # If there is no middle name.
-    if len(name_and_middle) > 1:
-        full_name.append(capwords((name_and_middle[1]).rstrip()))   # Adds middle names to list
-    else:
-        full_name.append('=NA()')
+    # If the name is in the format last name(s), first name middle name(s)
+    if last_name_first is None or last_name_first is True:
+        full_name = re.split(',+', raw_name, 1)             # Splits names and last name into a list
+        full_name[0] = capwords(full_name[0].strip())       # Last name
+        full_name[1] = full_name[1].strip()                 # Cleans First name and middle name
+        name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle names into a list
+        full_name[1] = capwords(name_and_middle[0])         # First name
+
+    # If there is at least a middle name.
+        if len(name_and_middle) > 1:
+            full_name.append(capwords((name_and_middle[1]).rstrip()))   # Adds middle name(s) to list
+        else:
+            full_name.append('=NA()')
+
+    # If the name is in the format first name middle name(s) last name(s)
+    elif last_name_first is False:
+        parsed_name = re.split(' +', raw_name)          # Divides full name in substrings
+        full_name = ['=NA()']*3
+        full_name[1] = parsed_name[0]                   # Assign First name
+
+        # If a string for the beginning of last name is provided
+        if last_starts_with is not None:
+            # If the comparison string matches the beginning of the last substring
+            if parsed_name[-1].startswith(last_starts_with):
+                full_name[0] = parsed_name[-1]          # Assign Last name
+                length = len(parsed_name)
+                # If name has more than two substrings, there must be at least a middle name
+                if length > 2:
+                    full_name[2] = ' '.join(parsed_name[1:(length-1)])  # Assigns the middle name(s)
+                else:
+                    full_name[2] = '=NA()'
+            # If the comparison string matches the beginning of the second to last substring
+            elif parsed_name[-2].startswith(last_starts_with):
+                full_name[0] = parsed_name[-2] + ' ' + parsed_name[-1]      # Assigns the last names
+                length = len(parsed_name)
+                # If the name has more than three substrings, it must have at least one middle name
+                if length > 2:
+                    if length > 3:
+                        full_name[2] = ' '.join(parsed_name[1:(length-2)])  #
+                    else:
+                        full_name[2] = '=NA()'
+                else:
+                    full_name[2] = '=NA()'
+            else:
+                full_name[0] = parsed_name[-1]
+                length = len(parsed_name)
+                if length > 2:
+                    full_name[2] = parsed_name[1:(length-1)]
+                else:
+                    full_name[2] = '=NA()'
+
+        else:
+            full_name[0] = parsed_name[-1]
+            length = len(parsed_name)
+            if length > 2:
+                full_name[2] = ' '.join(parsed_name[1:(length-1)])
+            else:
+                full_name[2] = '=NA()'
+
     return full_name
 
 
@@ -208,7 +257,7 @@ def get_name_link(a_tag):
     link = str(a_tag.get('href'))            # Obtains link contained in <a> html tag
     # link = 'http://whitepages.tufts.edu/' + link
     contents = str(a_tag.string.extract())      # This operation might not be the most efficient. Look for alternatives
-    return link, contents                       # Consider potential errors when returning this tuple
+    return contents, link                       # Consider potential errors when returning this tuple
 
 
 # Debug function for short lists. Returns a string with elements of list separated by newline chars.
