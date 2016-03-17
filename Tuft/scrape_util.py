@@ -76,6 +76,7 @@ def alpha_generator(uppercase = None):
 
 # Determines whether the characters "first" and "last" are in valid alphabetic range
 # Returns uppercase version "first" and "last" in alphabetic order
+# Some fixes needed when raising errors
 def char_fix(first, last, uppercase = None):
 
     if uppercase == None or uppercase == False:
@@ -113,7 +114,9 @@ def char_fix(first, last, uppercase = None):
 # Consider changing to a dictionary or a class for readability
 def name_splitter(raw_name, last_name_first = None, last_starts_with= None):
 
-    # If the name is in the format last name(s), first name middle name(s)
+    raw_name = raw_name.strip()     # Strips name from whitespaces before and after string
+
+    # If the last name comes before the first name (separated by a comma):
     if last_name_first is None or last_name_first is True:
         full_name = re.split(',+', raw_name, 1)             # Splits names and last name into a list
         full_name[0] = capwords(full_name[0].strip())       # Last name
@@ -121,56 +124,63 @@ def name_splitter(raw_name, last_name_first = None, last_starts_with= None):
         name_and_middle = re.split(' +', full_name[1],1)    # Splits first name and middle names into a list
         full_name[1] = capwords(name_and_middle[0])         # First name
 
-    # If there is at least a middle name.
+        # If there is at least a middle name
         if len(name_and_middle) > 1:
-            full_name.append(capwords((name_and_middle[1]).rstrip()))   # Adds middle name(s) to list
+            full_name.append(capwords((name_and_middle[1]).rstrip()))   # Adds middle names to list
+        # Else, write "=NA()'
         else:
             full_name.append('=NA()')
 
-    # If the name is in the format first name middle name(s) last name(s)
+    # Else, if the first name and middle name(s) (if any) comes before:
+    # This part requires revision. I found a student with 3 last names. Code handles up to 2 last names
     elif last_name_first is False:
-        parsed_name = re.split(' +', raw_name)          # Divides full name in substrings
-        full_name = ['=NA()']*3
-        full_name[1] = parsed_name[0]                   # Assign First name
+        parsed_name = re.split(' +', raw_name)          # Separate name based on white spaces
+        full_name = ['=NA()']*3                         # Generate a container for components of name
+        full_name[1] = parsed_name[0]                   # First name stored
 
-        # If a string for the beginning of last name is provided
+        # If the beginning of the last name was provided, check for a string that matches
+        # This increases possibility of acquiring the right last name (some individuals have two last names)
         if last_starts_with is not None:
-            # If the comparison string matches the beginning of the last substring
+            # Check last string for a match
             if parsed_name[-1].startswith(last_starts_with):
-                full_name[0] = parsed_name[-1]          # Assign Last name
+                full_name[0] = parsed_name[-1]          # Store last name
                 length = len(parsed_name)
-                # If name has more than two substrings, there must be at least a middle name
+                # If there are more than 2 strings, then there is at least a middle name
                 if length > 2:
-                    full_name[2] = ' '.join(parsed_name[1:(length-1)])  # Assigns the middle name(s)
+                    full_name[2] = ' '.join(parsed_name[1:(length-1)])  # Store middle name(s)
                 else:
-                    full_name[2] = '=NA()'
-            # If the comparison string matches the beginning of the second to last substring
+                    full_name[2] = '=NA()'              # Individual has no middle name
+            # Check second to last string for  match
             elif parsed_name[-2].startswith(last_starts_with):
-                full_name[0] = parsed_name[-2] + ' ' + parsed_name[-1]      # Assigns the last names
+                full_name[0] = parsed_name[-2] + ' ' + parsed_name[-1]  # If there are two last names, store both
                 length = len(parsed_name)
-                # If the name has more than three substrings, it must have at least one middle name
+                # If there are more than two strings
                 if length > 2:
-                    if length > 3:
-                        full_name[2] = ' '.join(parsed_name[1:(length-2)])  #
+                    if length > 3:      # If there are more than 3 strings, there must be at least a middle name
+                        full_name[2] = ' '.join(parsed_name[1:(length-2)])  # Store middle names
                     else:
-                        full_name[2] = '=NA()'
+                        full_name[2] = '=NA()'  # Individual has no middle name
                 else:
-                    full_name[2] = '=NA()'
+                    full_name[2] = '=NA()'      # Individual has no middle name
+            # If there is no match, do a "best guess"
             else:
-                full_name[0] = parsed_name[-1]
+                full_name[0] = parsed_name[-1]  # Last string is [most probably] the last name
                 length = len(parsed_name)
+                # If there are more than 2 strings, the individual probably has a middle name
                 if length > 2:
-                    full_name[2] = parsed_name[1:(length-1)]
+                    full_name[2] = parsed_name[1:(length-1)]  # Store [possible] middle name(s)
                 else:
                     full_name[2] = '=NA()'
 
+        # If the beginning of the last name is not provided, do a "best guess"
         else:
-            full_name[0] = parsed_name[-1]
+            full_name[0] = parsed_name[-1]      # Last string is [most probably] the last name
             length = len(parsed_name)
+            # If there are more than 2 strings, the individual probably has a middle name
             if length > 2:
-                full_name[2] = ' '.join(parsed_name[1:(length-1)])
+                full_name[2] = ' '.join(parsed_name[1:(length-1)])  # Store [possible] middle name(s)
             else:
-                full_name[2] = '=NA()'
+                full_name[2] = '=NA()'  # Individual has no middle name
 
     return full_name
 
@@ -214,7 +224,7 @@ def instantiate_browser(url, robots = None):
     # browser_obj.set_handle_gzip(True)     # Throws a warning, I have to check more in depth what this does
     br_obj.set_handle_redirect(True)
     br_obj.set_handle_referer(True)
-    if robots == False:                     # Ignores robots only if requested in instantiate_browser() call
+    if robots is False:                     # Ignores robots only if requested in instantiate_browser() call
         br_obj.set_handle_robots(False)
     br_obj.open(url)
 
@@ -227,7 +237,7 @@ def get_form_response(browser_object, query_string):
     browser_object.select_form("search")
     browser_object['type'] = ['Students']
     browser_object['LastOption'] = ['starts']
-    browser_object['getLast'] = query_string     # Temporarily using only one set of chars for development and debugging
+    browser_object['getLast'] = query_string
 
     # This piece of code below does exactly the same as above. Left for reference.
 
@@ -254,17 +264,18 @@ def get_form_response(browser_object, query_string):
 # Receives an <a> tag and its contents
 # Returns a 2-tuple containing the link in the <a> tag and the contents of the tag.
 def get_name_link(a_tag):
-    link = str(a_tag.get('href'))            # Obtains link contained in <a> html tag
-    # link = 'http://whitepages.tufts.edu/' + link
+    link = str(a_tag.get('href'))               # Obtains link contained in <a> html tag
     contents = str(a_tag.string.extract())      # This operation might not be the most efficient. Look for alternatives
     return contents, link                       # Consider potential errors when returning this tuple
 
 
 # Debug function for short lists. Returns a string with elements of list separated by newline chars.
-# I an element of the list is a tuple, the contents of the tuple are placed in one line.
+# If an element of the list is a tuple, the contents of the tuple are placed in one line.
 def debug_multiline_list(lst):
 
     single_str_list = [', '.join(line) if type(line) == tuple else str(line) for line in lst]
+    for i, line in enumerate(single_str_list):
+        single_str_list[i] = str(i) + ' ' + single_str_list[i]
     return '\n'.join(single_str_list)
 
 

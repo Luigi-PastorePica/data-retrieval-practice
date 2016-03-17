@@ -1,5 +1,6 @@
 import csv
 
+
 # Instances of this class store information of individuals registered in the institution
 # Organization might be dropped eventually. Keeping it depends on it being useful for our purposes.
 class PersonInfo(object):
