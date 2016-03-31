@@ -6,7 +6,8 @@ from pdfminer import pdfparser
 import Tkinter
 from os import walk, system
 import os
-import psutil
+from psutil import process_iter
+from psutil import ZombieProcess
 import shutil
 from subprocess import check_call
 
@@ -111,6 +112,7 @@ class Candidate(object):
     def data_to_clipboard(self):
         clipboard.copy('\t'.join(self.values))  # Copies data to clipboard
 
+
 # Obtains a list of names of files and directories contained in the desired folder.
 # Input: directory path. Output: directory path, list of file names, list of directory names
 def get_dir_contents(dir_path):
@@ -123,6 +125,26 @@ def get_dir_contents(dir_path):
         dir_list = [path.join(root_path, name) for name in dir_name]
         break
     return dir_path, file_list, dir_list
+
+
+# Checks for process and kills it.
+# If exact_match == False, the function looks for any process containing proc_name
+# Else, exact process name match required
+def end_process (proc_name, exact_match = False):
+    if exact_match == False:
+        for process in process_iter():
+            try:
+                if proc_name in process.name():
+                    process.terminate()
+            except ZombieProcess:
+                continue
+    else:
+        for process in process_iter():
+            try:
+                if proc_name == process.name():
+                    process.terminate()
+            except ZombieProcess:
+                continue
 
 # Path to directory. Eventually should be kept in a separate file and retrieved by the program.
 # /Users/Twilit_Zero/Downloads/Snap/Metrics_Acquisition/Resumes/
@@ -263,11 +285,7 @@ while True:
 
     candidate.set_notes(notes)
 
-    # Here I was trying to kill the process for Preview. Did not work though
-    # process_name = 'Preview.app'
-    # for process in psutil.process_iter():
-    #     if process == process_name:
-    #         process.kill()
+    end_process('Preview')  # Kills Preview process (Closes the window)
 
     print
     print "PLEASE REMEMBER TO PASTE THE INFORMATION INTO THE SPREADSHEET"
@@ -277,6 +295,7 @@ while True:
     candidate.join_data()
     candidate.write_to_csv()
     candidate.data_to_clipboard()
+
 
     keep_going = raw_input("Do you want to review another resume?\t\t\t")
     print
