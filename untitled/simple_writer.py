@@ -1,18 +1,25 @@
 from csv import writer
-import clipboard
+from clipboard import copy
+from clipboard import paste
 from os import path
 from os import stat
-from pdfminer import pdfparser
 import Tkinter
 from os import walk, system
-import os
+import os                   # find other os uses in the code. I think there is a conflict with path attr.
 from psutil import process_iter
 from psutil import ZombieProcess
-import shutil
 from subprocess import check_call
+from txt_extract import text_prep
+from txt_extract import find_email
+from txt_extract import list_menu
+from txt_extract import match_alnum
+from txt_extract import to_lowercase
+from txt_extract import get_text
+from csv_extract import get_col_contents
+from time import sleep
 
-# Note to self: When revising code, be careful with vars that contain path and those that do not. new_name_with_path, name_with_path
-
+# Note to self: When revising code, be careful with vars that contain path and those that do not:
+# new_name_with_path, name_with_path
 
 # List containing name and order of columns
 columns = ['alt_email', 'year', 'gender', 'school', 'degree', 'gpa',
@@ -20,6 +27,7 @@ columns = ['alt_email', 'year', 'gender', 'school', 'degree', 'gpa',
            'major1', 'major2', 'minor1', 'minor2',
            'grad_school', 'grad_degree', 'grad_major', 'grad_year', 'grad_gpa',
            'notes']
+
 
 # Class that stores candidate data and serves other simple functions.
 class Candidate(object):
@@ -110,7 +118,7 @@ class Candidate(object):
 
     # Exports data to clipboard
     def data_to_clipboard(self):
-        clipboard.copy('\t'.join(self.values))  # Copies data to clipboard
+        copy('\t'.join(self.values))  # Copies data to clipboard
 
 
 # Obtains a list of names of files and directories contained in the desired folder.
@@ -128,9 +136,10 @@ def get_dir_contents(dir_path):
 
 
 # Checks for process and kills it.
-# If exact_match == False, the function looks for any process containing proc_name
-# Else, exact process name match required
 def end_process (proc_name, exact_match = False):
+    # If exact_match == False, the function looks for any
+    # process containing proc_name
+    # Else, exact process name match required
     if exact_match == False:
         for process in process_iter():
             try:
@@ -149,34 +158,68 @@ def end_process (proc_name, exact_match = False):
 # Path to directory. Eventually should be kept in a separate file and retrieved by the program.
 # /Users/Twilit_Zero/Downloads/Snap/Metrics_Acquisition/Resumes/
 
-# dir_path, files, directories = get_dir_contents(raw_input("Input Path: "))
+# obtaining file names in folder
 dir_path, files, directories = get_dir_contents('/Users/Twilit_Zero/Downloads/Snap/Metrics_Acquisition/Resumes/')
 dir_path = dir_path.replace(' ', '\ ')
 
-# Makes the program repeat itself until user wants to quit
-while True:
+# obtaining list of institutions
+coll_contents = get_col_contents('/Users/Twilit_Zero/Snaptest/untitled/'
+                                 'Accreditation_2015_12/Accreditation_2015_12.csv', 'Institution_Name')
 
+# Makes the program repeat itself until user desires to quit
+while True:
+    print "====================================="
+    print "Start Entering Candidate Information"
+    print "====================================="
     file_name = files[1].replace(' ', '\ ')     # Gets the first filename in the list
 
     # Opens file with Preview app. This should change depending on OS
-    # Funtion to open with default exists. I think it would make the code more portable, but not convenient for me now.
-    # check_call(["open", "-a", '/Volumes/Macintosh\ HD/Applications/Preview.app', dir_path + '/' + file])
+    # Function to open with default exists. I think it would make the
+    # code more portable, but it is not convenient for me now.
     os.system("open -a /Volumes/Macintosh\ HD/Applications/Preview.app " + dir_path + file_name)
+    # check_call(["open", "-a", '/Volumes/Macintosh\ HD/Applications/Preview.app', dir_path + '/' + file])
 
-
-    # Candidate class Instantiation
     candidate = Candidate(columns)
 
     # If opened document is not a resume, move it to Not_Reviewed directory
+
     if raw_input("Is this a resume?\t\t\t\t\t\t\t\t").lower() == 'n':
         os.system('mv ' + (dir_path + file_name).replace(' ', '\ ') +
                   ' ' + dir_path + "__0A_Not_Reviewed")
+        end_process('Preview')
         del files[1]
         continue
     print
 
-    resume_email = raw_input("Resume e-mail\t\t\t\t\t")   # Eventually this will be replaced by a function that
-                                                        # automatically retrieves the e-mail from the file when possible.
+    file_text = get_text(dir_path + file_name, os.path.splitext(dir_path + file_name)[1])
+    file_text = text_prep(file_text)
+
+    email_list = find_email(file_text)
+    email_list = sorted(set(email_list))
+    to_lowercase(email_list)
+
+    if len(email_list) > 0:
+        if len(email_list) == 1:
+
+            if raw_input("Is this the e-mail in the resume?\t\t\t%s\t" %email_list[0]).lower() == 'y':
+                resume_email = email_list[0]
+                copy(email_list[0])
+            else:
+                resume_email = None
+        else:
+            print "Which one of these is the e-mail in the resume"
+            resume_email = list_menu(email_list)
+            copy(resume_email)
+            # Ok, and what happens to the other ones.
+            # There should be a loop here to check through them
+
+    else:
+        resume_email = None
+
+    if resume_email is None:
+        resume_email = raw_input("Resume e-mail\t\t\t\t\t")
+        copy(resume_email)
+    ######
     print
 
     same_email = raw_input("Is the e-mail the same as in the spreadsheet?\t")
@@ -192,15 +235,59 @@ while True:
         os.rename(dir_path + file_name, new_name_with_path)  #  Remember, if I decide to return full path instead of name only, change this accordingly
     elif same_email.lower() == 'n':
         alt_email = resume_email
-        original_email = raw_input("Original e-mail\t\t\t\t\t")
+        original_email = paste()
+        print '\b' + original_email
+        print
+        # This conditional is in case the user forgets to copy the email from the spreadsheet
+        if original_email == resume_email:
+            original_email = raw_input("Original e-mail\t\t\t\t\t")
         new_name_with_path = name_with_path + ' ' + original_email + ext
         os.rename(dir_path + file_name, new_name_with_path)      #  Remember, if I decide to return full path instead of name only, change this accordingly
     else:
         pass # I will eventually add something to handle this issue. Maybe a simple loop
+    ######
 
-    # Asks for data input
-    # alt_email = raw_input("Alternate e-mail\t\t\t\t")
-    school = raw_input("Undergrad college\t\t\t\t")
+    # Consider a try here until the end. If something goes wrong, revert the changes on the file's name
+    # another option is to do the name change at the end of the loop.
+    # consider making the name change portion into a function.
+    # If it seems useful beyond this project, move to another module.
+    print
+    print "________________________________________"
+    print "PLEASE WAIT, FETCHING SCHOOLS IN RESUME"
+    print "________________________________________"
+    print
+
+    ignore_words = ['and', '&', 'at', 'of', 'in', 'for', 'from']
+    file_text = file_text.lower()
+    schools = [row for row in coll_contents
+               if match_alnum(file_text, row.lower(), regx_string=r'.{0,10}',
+                              ignore_words=ignore_words)]
+    # Does not Work as intended. Too many matches.
+    if len(schools) == 0:
+        schools = [row for row in coll_contents
+               if match_alnum(file_text, row.lower(), word_limit=4,
+                              regx_string=r'.{0,10}', ignore_words=ignore_words)]
+
+    if len(schools) == 0:
+        school = None
+    elif len(schools) == 1:
+        if raw_input("Is this the college?\t\t\t" + schools[0] + " ").lower() == 'y':
+            school = schools[0]
+        else:
+            school = None
+    elif len(schools) > 1:
+        print "Which of these is the college?"
+        school = list_menu(schools)
+    else:
+        os.rename(new_name_with_path, dir_path + file_name )        # Reverses file name change in case of error
+        raise IndexError("Error. List position not reachable")
+
+    if school is None:
+        print
+        print "School not found"
+        print
+        school = raw_input("Undergrad college\t\t\t\t")
+
     year = raw_input("Undergrad graduation year\t\t")
     gpa = raw_input("Undergraduate GPA\t\t\t\t")
     degree = raw_input("Undergraduate degree\t\t\t")
@@ -212,7 +299,8 @@ while True:
     print
 
     # Stores acquired data in candidate object
-    candidate.set_basic_data(alt_email, year, school, degree,major1, major2, minor1, minor2, gpa)
+    candidate.set_basic_data(alt_email, year, school, degree,
+                             major1, major2, minor1, minor2, gpa)
 
     # If the candidate provided standardized test scores, ask for input.
     scores = raw_input("Does the candidate have test scores?\t\t\t")
@@ -235,7 +323,27 @@ while True:
     grad = raw_input("Does the candidate have a graduate degree?\t\t")
     print
     if grad.lower() == 'y':
-        grad_school = raw_input("Graduate college\t\t\t\t")
+        ###
+        if schools is None:
+            grad_school = None
+        elif len(schools) == 1:
+            if raw_input("Is this the college?\t\t\t" + schools[0] + " ").lower() == 'y':
+                grad_school = schools[0]
+            else:
+                grad_school = None
+        elif len(schools) > 0:
+            print "Which of these is the college?"
+            grad_school = list_menu(schools)
+        else:
+            os.rename(new_name_with_path, dir_path + file_name )
+            raise IndexError("Error. List position not reachable")
+
+        if grad_school is None:
+            print
+            print "School not found"
+            print
+            grad_school = raw_input("Graduate college\t\t\t\t")
+        ###
         grad_year = raw_input("Graduate year\t\t\t\t\t")
         grad_gpa = raw_input("Graduate GPA\t\t\t\t\t")
         grad_degree = raw_input("Graduate degree\t\t\t\t\t")
@@ -266,7 +374,8 @@ while True:
 
     if notes == 'n':
         os.system('mv ' + new_name_with_path.replace(' ', '\ ') +
-                  ' ' + dir_path + "__0A_Reviewed")    # This should not be hard coded. Planning to use same dictionary converting function I will create for column values
+                  ' ' + dir_path + "__0A_Reviewed")    # This should not be hard coded. Planning to use same dictionary
+                                                        #  converting function I will create for column values
         print "File moved to Reviewed folder"
     elif notes != 'n':
         incomplete = raw_input("Send to Incomplete folder?\t")
@@ -285,11 +394,11 @@ while True:
 
     candidate.set_notes(notes)
 
-    end_process('Preview')  # Kills Preview process (Closes the window)
 
     print
+    print "============================================================="
     print "PLEASE REMEMBER TO PASTE THE INFORMATION INTO THE SPREADSHEET"
-    print "______________________________________________________________________________"
+    print "============================================================="
     print
 
     candidate.join_data()
@@ -300,11 +409,14 @@ while True:
     keep_going = raw_input("Do you want to review another resume?\t\t\t")
     print
 
+    end_process('com.apple.Preview.TrustedBookmarksService', exact_match=True)
+    sleep(1)
+    end_process('Preview')  # Kills Preview process (Closes the window)
+
     if keep_going.lower() == 'n':
-        # os.kill()
         break
-#      os.kill()
 
     del files[1]    # Removes name of file just reviewed from list.
+
 
 print ('Have a good night')     # Silly program-quit message
